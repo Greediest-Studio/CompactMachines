@@ -38,10 +38,17 @@ public enum EnumMachineSize implements IStringSerializable {
     }
 
     public static EnumMachineSize getFromMeta(int meta) {
-        for (EnumMachineSize size : values()) {
-            if (size.meta == meta) {
-                return size;
-            }
+        switch (meta) {
+            case 0: return TINY;
+            case 1: return SMALL;
+            case 2: return NORMAL;
+            case 3: return LARGE;
+            case 4: return GIANT;
+            case 5: return MAXIMUM;
+            case 6: return EXTRA1;
+            case 7: return EXTRA2;
+            case 8: return EXTRA3;
+            case 9: return EXTRA4;
         }
         return TINY;
     }
