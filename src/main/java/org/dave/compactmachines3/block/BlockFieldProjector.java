@@ -7,6 +7,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.properties.PropertyDirection;
+import org.dave.compactmachines3.utility.PropertyUtils;
 import net.minecraft.block.state.BlockStateContainer;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.renderer.block.model.ModelResourceLocation;
@@ -43,7 +44,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 public class BlockFieldProjector extends BlockBase implements ITileEntityProvider, ITopInfoProvider {
-    public static final PropertyDirection FACING = PropertyDirection.create("facing");
+    public static final PropertyDirection FACING = PropertyUtils.createDirection("facing");
 
     public BlockFieldProjector(Material material) {
         super(material);

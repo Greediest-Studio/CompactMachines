@@ -7,6 +7,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.properties.PropertyDirection;
+import org.dave.compactmachines3.utility.PropertyUtils;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.renderer.block.model.ModelResourceLocation;
 import net.minecraft.entity.player.EntityPlayer;
@@ -34,7 +35,7 @@ import org.dave.compactmachines3.world.tools.DimensionTools;
 import org.dave.compactmachines3.world.tools.StructureTools;
 
 public abstract class BlockBaseTunnel extends BlockProtected implements ITileEntityProvider, ITopInfoProvider {
-    public static final PropertyDirection MACHINE_SIDE = PropertyDirection.create("machineside");
+    public static final PropertyDirection MACHINE_SIDE = PropertyUtils.createDirection("machineside");
 
     public BlockBaseTunnel(Material material) {
         super(material);
