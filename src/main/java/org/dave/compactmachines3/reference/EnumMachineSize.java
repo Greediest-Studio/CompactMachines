@@ -9,10 +9,10 @@ public enum EnumMachineSize implements IStringSerializable {
     LARGE   (3, "large", 10),
     GIANT   (4, "giant", 12),
     MAXIMUM (5, "maximum", 14),
-    EXTRA1  (6, "extra1", 16),
-    EXTRA2  (7, "extra2", 32),
-    EXTRA3  (8, "extra3", 64),
-    EXTRA4  (9, "extra4", 128);
+    EXTRA1  (6, "extra1", 18),
+    EXTRA2  (7, "extra2", 34),
+    EXTRA3  (8, "extra3", 50),
+    EXTRA4  (9, "extra4", 64);
 
     private int meta;
     private String name;
