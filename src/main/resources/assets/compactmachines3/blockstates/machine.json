@@ -17,7 +17,8 @@
       "extra2": { "textures": { "all": "compactmachines3:blocks/machine_7" }},
       "extra3": { "textures": { "all": "compactmachines3:blocks/machine_8" }},
       "extra4": { "textures": { "all": "compactmachines3:blocks/machine_9" }},
-      "extra0": { "textures": { "all": "compactmachines3:blocks/machine_10" }}
+      "extra5": { "textures": { "all": "compactmachines3:blocks/machine_10" }},
+      "extra0": { "textures": { "all": "compactmachines3:blocks/machine_11" }}
     }
   }
 }

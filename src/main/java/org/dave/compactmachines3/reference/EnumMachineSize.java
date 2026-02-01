@@ -13,8 +13,8 @@ public enum EnumMachineSize implements IStringSerializable {
     EXTRA2  (7, "extra2", 34),
     EXTRA3  (8, "extra3", 50),
     EXTRA4  (9, "extra4", 64),
-
-    EXTRA0  ( 10, "extra0", 2);
+    EXTRA5  ( 10, "extra5", 128),
+    EXTRA0  (11, "extra0", 2);
 
     private int meta;
     private String name;
@@ -51,7 +51,8 @@ public enum EnumMachineSize implements IStringSerializable {
             case 7: return EXTRA2;
             case 8: return EXTRA3;
             case 9: return EXTRA4;
-            case 10: return EXTRA0;
+            case 10: return EXTRA5;
+            case 11: return EXTRA0;
         }
         return TINY;
     }
