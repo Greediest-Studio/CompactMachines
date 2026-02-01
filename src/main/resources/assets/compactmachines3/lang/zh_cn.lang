@@ -6,11 +6,12 @@ tile.compactmachines3.machine.small.name=小型空间压缩机械
 tile.compactmachines3.machine.normal.name=标准空间压缩机械
 tile.compactmachines3.machine.large.name=大型空间压缩机械
 tile.compactmachines3.machine.giant.name=巨型空间压缩机械
-tile.compactmachines3.machine.maximum.name=最大空间压缩机械
-tile.compactmachines3.machine.extra1.name=空间压缩机械.扩容1
-tile.compactmachines3.machine.extra2.name=空间压缩机械.扩容2
-tile.compactmachines3.machine.extra3.name=空间压缩机械.扩容3
-tile.compactmachines3.machine.extra4.name=空间压缩机械.扩容4
+tile.compactmachines3.machine.maximum.name=超大型空间压缩机械
+tile.compactmachines3.machine.extra1.name=扩展型空间压缩机械
+tile.compactmachines3.machine.extra2.name=强化型空间压缩机械
+tile.compactmachines3.machine.extra3.name=进阶型空间压缩机械
+tile.compactmachines3.machine.extra4.name=专业型空间压缩机械
+tile.compactmachines3.machine.extra0.name=超微型空间压缩机械
 
 tile.compactmachines3.tunnel.name=空间压缩机械通道
 tile.compactmachines3.redstonetunnel.name=Redstone Tunnel
@@ -199,7 +200,11 @@ gui.compactmachines3.psd.welcome.welcome=Compact Machines3可以让您将复杂�
 gui.compactmachines3.psd.welcome.chapters=可用章节：
 
 gui.compactmachines3.psd.machines.label=空间压缩机械
-gui.compactmachines3.psd.machines.text=这是空间压缩机械模组的核心方块这个模组，可以让你在一个方块的大小中建立一个大型的房间并联通外面的世界。\n它们有不同的大小，从3x3x3到13x13x13不等。\n你可以通过压缩机械通道用任何一个压缩机械内的面联通外界并运输流体，物品等。\n你可以通过使用个人空间收缩设备右键空间压缩机械进入机械内部。\n请使用JEI查找制作配方。
+gui.compactmachines3.psd.machines.text=这是空间压缩机械模组的核心方块这个模组，可以让你在一个方块的大小中建立一个大型的房间并联通外面的世界。
+它们有不同的大小，从3x3x3到13x13x13不等。
+你可以通过压缩机械通道用任何一个压缩机械内的面联通外界并运输流体，物品等。
+你可以通过使用个人空间收缩设备右键空间压缩机械进入机械内部。
+请使用JEI查找制作配方。
 
 gui.compactmachines3.psd.tunnels.label=空间压缩机械通道
 gui.compactmachines3.psd.tunnels.text=压缩机械通道是连接机械内部和外部的通道，由于每个面只有一个连接点这意味着，每个空间压缩机械只能装备6个压缩机械通道。\n在机械内部右键一块墙壁来放置压缩机械通道，再次单击放置的面可以设置连接的面\n压缩机械通道使用Forge功能来实现方块内外的“连接”其他模组需要使用这个系统，通道才能正常工作这是大多数存储的实现方法，但很少用于多方块系统，所以不要太期待其他模组的管道系统能正常工作。
