@@ -1,17 +1,17 @@
 itemGroup.compactmachines3=Compact Machines 3
 generator.compactsky=Compact Sky
 
-tile.compactmachines3.machine.tiny.name=微型空间压缩机械
-tile.compactmachines3.machine.small.name=小型空间压缩机械
-tile.compactmachines3.machine.normal.name=标准空间压缩机械
-tile.compactmachines3.machine.large.name=大型空间压缩机械
-tile.compactmachines3.machine.giant.name=巨型空间压缩机械
-tile.compactmachines3.machine.maximum.name=超大型空间压缩机械
-tile.compactmachines3.machine.extra1.name=扩展型空间压缩机械
-tile.compactmachines3.machine.extra2.name=强化型空间压缩机械
-tile.compactmachines3.machine.extra3.name=进阶型空间压缩机械
-tile.compactmachines3.machine.extra4.name=专业型空间压缩机械
-tile.compactmachines3.machine.extra0.name=超微型空间压缩机械
+tile.compactmachines3.machine.tiny.name=微型压缩空间机械
+tile.compactmachines3.machine.small.name=小型压缩空间机械
+tile.compactmachines3.machine.normal.name=标准压缩空间机械
+tile.compactmachines3.machine.large.name=大型压缩空间机械
+tile.compactmachines3.machine.giant.name=巨型压缩空间机械
+tile.compactmachines3.machine.maximum.name=超大型压缩空间机械
+tile.compactmachines3.machine.extra1.name=扩展型压缩空间机械
+tile.compactmachines3.machine.extra2.name=强化型压缩空间机械
+tile.compactmachines3.machine.extra3.name=进阶型压缩空间机械
+tile.compactmachines3.machine.extra4.name=专业型压缩空间机械
+tile.compactmachines3.machine.extra0.name=超微型压缩空间机械
 
 tile.compactmachines3.tunnel.name=空间压缩机械通道
 tile.compactmachines3.redstonetunnel.name=Redstone Tunnel
