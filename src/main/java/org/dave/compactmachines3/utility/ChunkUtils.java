@@ -172,6 +172,74 @@ public class ChunkUtils {
     }
 
     /**
+     * Like writeChunkToNBT but only keeps section data and tile-entity/tile-tick entries
+     * that intersect the given vertical range [minY, maxY]. This reduces transferred
+     * data for machine previews that only need a subset of chunk height.
+     */
+    public static NBTTagCompound writeChunkToNBTRange(Chunk chunkIn, World worldIn, NBTTagCompound compound, int minY, int maxY) {
+        NBTTagCompound full = writeChunkToNBT(chunkIn, worldIn, compound);
+
+        int minSection = Math.max(0, minY >> 4);
+        int maxSection = Math.min(15, maxY >> 4);
+
+        if (full.hasKey("Sections")) {
+            NBTTagList sections = full.getTagList("Sections", 10);
+            NBTTagList filtered = new NBTTagList();
+
+            for (int i = 0; i < sections.tagCount(); i++) {
+                NBTTagCompound sec = sections.getCompoundTagAt(i);
+                int secY = sec.getByte("Y");
+                if (secY >= minSection && secY <= maxSection) {
+                    filtered.appendTag(sec);
+                }
+            }
+
+            full.setTag("Sections", filtered);
+        }
+
+        // Filter TileEntities by Y
+        if (full.hasKey("TileEntities")) {
+            NBTTagList tileEntities = full.getTagList("TileEntities", 10);
+            NBTTagList filteredTE = new NBTTagList();
+            for (int i = 0; i < tileEntities.tagCount(); i++) {
+                NBTTagCompound te = tileEntities.getCompoundTagAt(i);
+                if (te.hasKey("y")) {
+                    int y = te.getInteger("y");
+                    if (y >= minY && y <= maxY) {
+                        filteredTE.appendTag(te);
+                    }
+                } else {
+                    // Keep if no explicit y (defensive)
+                    filteredTE.appendTag(te);
+                }
+            }
+            full.setTag("TileEntities", filteredTE);
+        }
+
+        // Filter TileTicks by Y
+        if (full.hasKey("TileTicks")) {
+            NBTTagList ticks = full.getTagList("TileTicks", 10);
+            NBTTagList filteredTicks = new NBTTagList();
+            for (int i = 0; i < ticks.tagCount(); i++) {
+                NBTTagCompound t = ticks.getCompoundTagAt(i);
+                if (t.hasKey("y")) {
+                    int y = t.getInteger("y");
+                    if (y >= minY && y <= maxY) {
+                        filteredTicks.appendTag(t);
+                    }
+                } else {
+                    filteredTicks.appendTag(t);
+                }
+            }
+            full.setTag("TileTicks", filteredTicks);
+        }
+
+        // Entities are relatively small; we keep them all to avoid parsing Pos lists here.
+
+        return full;
+    }
+
+    /**
      * Reads the data stored in the passed NBTTagCompound and creates a Chunk with that data in the passed World.
      * Returns the created Chunk.
      */

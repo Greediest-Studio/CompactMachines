@@ -44,13 +44,17 @@ public class MessageMachineChunk implements IMessage, IMessageHandler<MessageMac
             NBTTagCompound parent = new NBTTagCompound();
             NBTTagList chunkList = new NBTTagList();
 
+            // The machine room vertical origin is at Y=40 in our fake world
+            int minY = 40;
+            int maxY = 40 + size;
+
             for (int cx = minChunkX; cx <= maxChunkX; cx++) {
                 for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
                     Chunk chunk = DimensionTools.getServerMachineWorld().getChunk(new BlockPos(cx * 16, 0, cz * 16));
                     if (chunk == null) {
                         continue;
                     }
-                    NBTTagCompound chunkTag = ChunkUtils.writeChunkToNBT(chunk, DimensionTools.getServerMachineWorld(), new NBTTagCompound());
+                    NBTTagCompound chunkTag = ChunkUtils.writeChunkToNBTRange(chunk, DimensionTools.getServerMachineWorld(), new NBTTagCompound(), minY, maxY);
                     chunkList.appendTag(chunkTag);
                 }
             }
