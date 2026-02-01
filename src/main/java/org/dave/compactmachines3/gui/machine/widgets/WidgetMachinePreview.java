@@ -307,10 +307,41 @@ public class WidgetMachinePreview extends Widget {
         }
 
         BlockPos roomPos = GuiMachineData.roomPos;
-        ChunkPos chunkPos = new ChunkPos(roomPos);
-        ClassInheritanceMultiMap<Entity> entities = CompactMachines3.clientWorldData.worldClone.getChunk(chunkPos.x, chunkPos.z).getEntityLists()[2];
-        for(Entity entity : entities) {
-            renderEntity(entity, roomPos);
+        if (roomPos == null) return;
+
+        int size = GuiMachineData.machineSize;
+
+        int startX = roomPos.getX();
+        int startZ = roomPos.getZ();
+        int endX = startX + size;
+        int endZ = startZ + size;
+
+        int minChunkX = startX >> 4;
+        int maxChunkX = endX >> 4;
+        int minChunkZ = startZ >> 4;
+        int maxChunkZ = endZ >> 4;
+
+        for (int cx = minChunkX; cx <= maxChunkX; cx++) {
+            for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
+                net.minecraft.world.chunk.Chunk chunk = CompactMachines3.clientWorldData.worldClone.getChunk(cx, cz);
+                if (chunk == null) continue;
+
+                ClassInheritanceMultiMap<Entity>[] allLists = chunk.getEntityLists();
+                for (ClassInheritanceMultiMap<Entity> entities : allLists) {
+                    if (entities == null) continue;
+                    for (Entity entity : entities) {
+                        // Only render entities within the machine bounding box
+                        double relX = entity.posX - roomPos.getX();
+                        double relY = entity.posY - roomPos.getY();
+                        double relZ = entity.posZ - roomPos.getZ();
+
+                        if (relX < 0 || relY < 0 || relZ < 0) continue;
+                        if (relX > size || relY > size || relZ > size) continue;
+
+                        renderEntity(entity, roomPos);
+                    }
+                }
+            }
         }
     }
 
