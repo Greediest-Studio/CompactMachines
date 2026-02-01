@@ -7,6 +7,10 @@ tile.compactmachines3.machine.normal.name=标准空间压缩机械
 tile.compactmachines3.machine.large.name=大型空间压缩机械
 tile.compactmachines3.machine.giant.name=巨型空间压缩机械
 tile.compactmachines3.machine.maximum.name=最大空间压缩机械
+tile.compactmachines3.machine.extra1.name=空间压缩机械.扩容1
+tile.compactmachines3.machine.extra2.name=空间压缩机械.扩容2
+tile.compactmachines3.machine.extra3.name=空间压缩机械.扩容3
+tile.compactmachines3.machine.extra4.name=空间压缩机械.扩容4
 
 tile.compactmachines3.tunnel.name=空间压缩机械通道
 tile.compactmachines3.redstonetunnel.name=Redstone Tunnel
