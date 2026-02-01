@@ -1,7 +1,10 @@
 buildscript {
     repositories {
         jcenter()
-        maven { url = "http://files.minecraftforge.net/maven" }
+        maven {
+            name = "forge"
+            url = "https://files.minecraftforge.net/maven"
+        }
     }
     dependencies {
         classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
@@ -19,7 +22,7 @@ compileJava {
 }
 
 minecraft {
-    version = "${minecraft_version}-${forge_version}"
+    version = "1.12.2-14.23.5.2831"
     runDir = "run"
 
     mappings = "stable_39"
@@ -29,97 +32,44 @@ minecraft {
 }
 
 repositories {
-    maven { // The repo from which to get waila
-        name "Mobius Repo"
-        // url "http://mobiusstrip.eu/maven"
-        url "http://maven.tehnut.info"
-    }
-
-    maven { // TheOneProbe
-        name 'tterrag maven'
-        url "http://maven.tterrag.com/"
-    }
-
-    maven { // location of the maven that hosts JEI files
-        name "Progwml Repo"
-        url "http://dvs1.progwml6.com/files/maven"
-    }
-
-    maven { // jei by ip, because travis couldn't resolve it?!
-        name "Progwml Repo"
-        url "http://104.168.20.187/files/maven"
-    }
-
-    maven {
-        name = "CoFH Maven"
-        url = "http://maven.covers1624.net"
-    }
-
-    maven {
-        name = "ChickenBones Maven"
-        url = "http://chickenbones.net/maven/"
-    }
-
-    // Refined Storage removed their 1.12 api jar from their maven repository
-    // maven {
-    //     name = "refinedstorage"
-    //     url = "https://repo.refinedmods.com/"
-    // }
-
-    // Refined Storage workaround
-    flatDir {
-        dirs 'lib'
-    }
-
-    maven {
-        name = "opencomputers"
-        url = "http://maven.cil.li/"
+    repositories {
+        maven {
+            url "https://cursemaven.com"
+        }
     }
 }
 
 dependencies {
-    deobfCompile "mezz.jei:jei_${minecraft.version}:${jei_version}:api"
-    //runtime "mezz.jei:jei_${minecraft.version}:${jei.version}"
 
-    deobfCompile "mcp.mobius.waila:Hwyla:${waila_version}:api"
-
-    deobfCompile("mcjty.theoneprobe:TheOneProbe-${top_minecraft_version}:${top_version}") {
-        transitive = false
-    }
-
-    deobfCompile "refinedstorage:refinedstorage:${rs_version}:api"
-
-    deobfCompile "li.cil.oc:OpenComputers:${oc_version}:api"
-
+    deobfCompile ("curse.maven:jei-238222:5846804")
+    deobfCompile ("curse.maven:hwyla-253449:2568751")
+    deobfCompile ("curse.maven:topce-885670:7129885")
+    deobfCompile ("curse.maven:refinedstorage-243076:2940914")
+    deobfCompile ("curse.maven:OpenComputers-223008:6608365")
 
     // All of the following are needed to make Ducts connect to each other visually
     // in recipes and in the machine view. :(
-    deobfCompile("cofh:ThermalDynamics:${minecraft.version}-${cofh_thermaldynamics_version}:universal") {
+    deobfCompile("curse.maven:ThermalDynamics-227443:2920505") {
         transitive = false
     }
-
-    deobfCompile("cofh:CoFHCore:${minecraft.version}-${cofh_core_version}:universal") {
+    deobfCompile("curse.maven:CoFHCore-69162:2920433") {
         transitive = false
     }
 
     // And some runtime-dependencies for the above two libraries.
-    runtime("cofh:ThermalFoundation:${minecraft.version}-${cofh_thermalfoundation_version}:universal") {
+    runtime("curse.maven:ThermalFoundation-222880:2926428") {
         transitive = false
     }
-
-    runtime("cofh:ThermalExpansion:${minecraft.version}-${cofh_thermalexpansion_version}:universal") {
+    runtime("curse.maven:thermal-expansion-69163:2926431") {
         transitive = false
     }
-
-    runtime("cofh:ThermalCultivation:${minecraft.version}-${cofh_thermalcultivation_version}:universal") {
+    runtime("curse.maven:ThermalCultivation-271835:2920437") {
         transitive = false
     }
-
-    runtime("cofh:CoFHWorld:${minecraft.version}-${cofh_world_version}:universal") {
+    runtime("curse.maven:CoFHWorld-271384:2920434") {
         transitive = false
     }
-
-    runtime("codechicken:CodeChickenLib:${minecraft.version}-${ccl_version}:universal") {
+    runtime("curse.maven:CodeChickenLib-242818:2779848") {
         transitive = false
     }
 }

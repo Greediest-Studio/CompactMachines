@@ -8,7 +8,11 @@ public enum EnumMachineSize implements IStringSerializable {
     NORMAL  (2, "normal", 8),
     LARGE   (3, "large", 10),
     GIANT   (4, "giant", 12),
-    MAXIMUM (5, "maximum", 14);
+    MAXIMUM (5, "maximum", 14),
+    EXTRA1  (6, "extra1", 16),
+    EXTRA2  (7, "extra2", 32),
+    EXTRA3  (8, "extra3", 64),
+    EXTRA4  (9, "extra4", 128);
 
     private int meta;
     private String name;
@@ -34,15 +38,11 @@ public enum EnumMachineSize implements IStringSerializable {
     }
 
     public static EnumMachineSize getFromMeta(int meta) {
-        switch (meta) {
-            case 0: return TINY;
-            case 1: return SMALL;
-            case 2: return NORMAL;
-            case 3: return LARGE;
-            case 4: return GIANT;
-            case 5: return MAXIMUM;
+        for (EnumMachineSize size : values()) {
+            if (size.meta == meta) {
+                return size;
+            }
         }
-
         return TINY;
     }
 }
