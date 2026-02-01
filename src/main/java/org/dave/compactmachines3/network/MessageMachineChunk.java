@@ -2,6 +2,7 @@ package org.dave.compactmachines3.network;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.fml.common.network.ByteBufUtils;
@@ -26,8 +27,36 @@ public class MessageMachineChunk implements IMessage, IMessageHandler<MessageMac
         if (roomPos == null) {
             this.data = new NBTTagCompound();
         } else {
-            Chunk chunk = DimensionTools.getServerMachineWorld().getChunk(roomPos);
-            this.data = ChunkUtils.writeChunkToNBT(chunk, DimensionTools.getServerMachineWorld(), new NBTTagCompound());
+            WorldSavedDataMachines data = WorldSavedDataMachines.getInstance();
+            org.dave.compactmachines3.reference.EnumMachineSize sizeEnum = data.machineSizes.getOrDefault(id, org.dave.compactmachines3.reference.EnumMachineSize.MAXIMUM);
+            int size = sizeEnum.getDimension();
+
+            int startX = roomPos.getX();
+            int startZ = roomPos.getZ();
+            int endX = startX + size;
+            int endZ = startZ + size;
+
+            int minChunkX = startX >> 4;
+            int maxChunkX = endX >> 4;
+            int minChunkZ = startZ >> 4;
+            int maxChunkZ = endZ >> 4;
+
+            NBTTagCompound parent = new NBTTagCompound();
+            NBTTagList chunkList = new NBTTagList();
+
+            for (int cx = minChunkX; cx <= maxChunkX; cx++) {
+                for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
+                    Chunk chunk = DimensionTools.getServerMachineWorld().getChunk(new BlockPos(cx * 16, 0, cz * 16));
+                    if (chunk == null) {
+                        continue;
+                    }
+                    NBTTagCompound chunkTag = ChunkUtils.writeChunkToNBT(chunk, DimensionTools.getServerMachineWorld(), new NBTTagCompound());
+                    chunkList.appendTag(chunkTag);
+                }
+            }
+
+            parent.setTag("chunks", chunkList);
+            this.data = parent;
         }
     }
 
@@ -54,8 +83,20 @@ public class MessageMachineChunk implements IMessage, IMessageHandler<MessageMac
             return null;
         }
 
-        // TODO: Clients might need to update the rendering of the machine block and its neighbors
-        CompactMachines3.clientWorldData.worldClone.providerClient.loadChunkFromNBT(message.data);
+        // Clients might need to update the rendering of the machine block and its neighbors
+        try {
+            if (message.data.hasKey("chunks")) {
+                NBTTagList list = message.data.getTagList("chunks", 10);
+                for (int i = 0; i < list.tagCount(); i++) {
+                    NBTTagCompound chunkTag = list.getCompoundTagAt(i);
+                    CompactMachines3.clientWorldData.worldClone.providerClient.loadChunkFromNBT(chunkTag);
+                }
+            } else if (!message.data.getKeySet().isEmpty()) {
+                CompactMachines3.clientWorldData.worldClone.providerClient.loadChunkFromNBT(message.data);
+            }
+        } catch (Exception e) {
+            CompactMachines3.logger.debug("Failed loading machine chunks: {}", e.getMessage());
+        }
         return null;
     }
 }

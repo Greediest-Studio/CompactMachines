@@ -86,9 +86,27 @@ public class WidgetMachinePreview extends Widget {
         }
 
         if(GuiMachineData.requiresNewDisplayList) {
-            BlockPos roomPos = GuiMachineData.roomPos;
-            ChunkPos chunkPos = new ChunkPos(roomPos);
-            List<BlockPos> toRenderCopy = CompactMachines3.clientWorldData.worldClone.providerClient.getRenderListForChunk(chunkPos.x, chunkPos.z);
+                BlockPos roomPos = GuiMachineData.roomPos;
+                int machineSize = GuiMachineData.machineSize;
+                int startX = roomPos.getX();
+                int startZ = roomPos.getZ();
+                int endX = startX + machineSize;
+                int endZ = startZ + machineSize;
+
+                int minChunkX = startX >> 4;
+                int maxChunkX = endX >> 4;
+                int minChunkZ = startZ >> 4;
+                int maxChunkZ = endZ >> 4;
+
+                List<BlockPos> toRenderCopy = new java.util.ArrayList<>();
+                for (int cx = minChunkX; cx <= maxChunkX; cx++) {
+                    for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
+                        List<BlockPos> sub = CompactMachines3.clientWorldData.worldClone.providerClient.getRenderListForChunk(cx, cz);
+                        if (sub != null) {
+                            toRenderCopy.addAll(sub);
+                        }
+                    }
+                }
             if(toRenderCopy != null) {
                 TileEntityRendererDispatcher.instance.setWorld(CompactMachines3.clientWorldData.worldClone);
 
@@ -210,8 +228,26 @@ public class WidgetMachinePreview extends Widget {
         BlockPos roomPos = GuiMachineData.roomPos;
         if (roomPos == null)
             return;
-        ChunkPos chunkPos = new ChunkPos(roomPos);
-        List<BlockPos> toRenderCopy = CompactMachines3.clientWorldData.worldClone.providerClient.getRenderListForChunk(chunkPos.x, chunkPos.z);
+        int machineSize = GuiMachineData.machineSize;
+        int startX = roomPos.getX();
+        int startZ = roomPos.getZ();
+        int endX = startX + machineSize;
+        int endZ = startZ + machineSize;
+
+        int minChunkX = startX >> 4;
+        int maxChunkX = endX >> 4;
+        int minChunkZ = startZ >> 4;
+        int maxChunkZ = endZ >> 4;
+
+        List<BlockPos> toRenderCopy = new java.util.ArrayList<>();
+        for (int cx = minChunkX; cx <= maxChunkX; cx++) {
+            for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
+                List<BlockPos> sub = CompactMachines3.clientWorldData.worldClone.providerClient.getRenderListForChunk(cx, cz);
+                if (sub != null) {
+                    toRenderCopy.addAll(sub);
+                }
+            }
+        }
         if(ConfigurationHandler.MachineSettings.renderTileEntitiesInGUI) {
             this.renderTileEntities(TileEntityRendererDispatcher.instance, toRenderCopy);
         }

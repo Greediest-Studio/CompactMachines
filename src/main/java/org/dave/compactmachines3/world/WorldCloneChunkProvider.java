@@ -47,16 +47,17 @@ public class WorldCloneChunkProvider implements IChunkProvider {
         this.loadedChunks.put(ChunkPos.asLong(chunk.x, chunk.z), chunk);
 
         List<BlockPos> toRender = new ArrayList<>();
-        for(int x = 15; x >= 0; x--) {
-            for(int y = 15; y >= 0; y--) {
-                for(int z = 15; z >= 0; z--) {
-                    BlockPos pos = chunk.getPos().getBlock(x, y + 40, z);
+        // Iterate full chunk height (0..255) to support machines taller than one 16-block section
+        for (int x = 15; x >= 0; x--) {
+            for (int z = 15; z >= 0; z--) {
+                for (int y = 255; y >= 0; y--) {
+                    BlockPos pos = chunk.getPos().getBlock(x, y, z);
                     IBlockState state = chunk.getBlockState(pos);
-                    if(state.getBlock() == Blocks.AIR) {
+                    if (state.getBlock() == Blocks.AIR) {
                         continue;
                     }
 
-                    if(state.getBlock() == Blocks.BARRIER) {
+                    if (state.getBlock() == Blocks.BARRIER) {
                         continue;
                     }
 
