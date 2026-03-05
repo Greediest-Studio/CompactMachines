@@ -14,6 +14,7 @@ import net.minecraftforge.fml.common.FMLCommonHandler;
 import org.dave.compactmachines3.CompactMachines3;
 import org.dave.compactmachines3.misc.ConfigurationHandler;
 import org.dave.compactmachines3.network.MessageMachinePositions;
+import org.dave.compactmachines3.reference.EnumMachineSize;
 import org.dave.compactmachines3.schema.Schema;
 import org.dave.compactmachines3.schema.SchemaRegistry;
 import org.dave.compactmachines3.skyworld.SkyWorldSavedData;
@@ -24,6 +25,30 @@ import org.dave.compactmachines3.world.TeleporterMachines;
 import org.dave.compactmachines3.world.WorldSavedDataMachines;
 
 public class TeleportationTools {
+    private static Vec3d getMachineDestination(int id) {
+        WorldSavedDataMachines data = WorldSavedDataMachines.getInstance();
+
+        Vec3d existingDestination = data.spawnPoints.get(id);
+        if (existingDestination != null) {
+            return existingDestination;
+        }
+
+        BlockPos roomPos = data.getMachineRoomPosition(id);
+        if (roomPos == null) {
+            CompactMachines3.logger.warn("Unable to resolve machine room position for id {}", id);
+            return null;
+        }
+
+        EnumMachineSize size = data.machineSizes.get(id);
+        int centerOffset = size != null ? size.getDimension() / 2 : 0;
+
+        Vec3d fallbackDestination = new Vec3d(roomPos).add(centerOffset + 0.5d, 2d, centerOffset + 0.5d);
+        data.addSpawnPoint(id, fallbackDestination);
+        CompactMachines3.logger.warn("Spawn point missing for machine id {}. Reconstructed fallback destination at {}, {}, {}",
+                id, fallbackDestination.x, fallbackDestination.y, fallbackDestination.z);
+        return fallbackDestination;
+    }
+
     public static boolean tryToEnterMachine(EntityPlayer player, TileEntityMachine machine) {
         BlockPos pos = machine.getPos();
         World world = machine.getWorld();
@@ -127,10 +152,7 @@ public class TeleportationTools {
         }
 
         TileEntityMachine machine = WorldSavedDataMachines.getInstance().getMachine(id);
-        if (machine == null)
-            return;
-
-        if(machine.hasNewSchema()) {
+        if (machine != null && machine.hasNewSchema()) {
             Schema schema = SchemaRegistry.instance.getSchema(machine.getSchemaName());
             if(schema == null) {
                 CompactMachines3.logger.warn("Unknown schema used by Compact Machine @ {}", WorldSavedDataMachines.getInstance().getMachineBlockPosition(id));
@@ -142,9 +164,16 @@ public class TeleportationTools {
                 machine.setSchema(null);
                 machine.markDirty();
             }
+        } else if (machine == null) {
+            CompactMachines3.logger.warn("Could not resolve TileEntityMachine for id {} during teleport; using saved destination data", id);
         }
 
-        Vec3d destination = WorldSavedDataMachines.getInstance().spawnPoints.get(id);
+        Vec3d destination = getMachineDestination(id);
+        if (destination == null) {
+            CompactMachines3.logger.error("Teleport destination could not be resolved for machine id {}", id);
+            return;
+        }
+
         player.setPositionAndUpdate(destination.x, destination.y, destination.z);
     }
 
