@@ -40,7 +40,7 @@ public class TeleportationTools {
         }
 
         EnumMachineSize size = data.machineSizes.get(id);
-        int centerOffset = size != null ? size.getDimension() / 2 : 0;
+        int centerOffset = size != null ? size.getDimension() / 2 : 1;
 
         Vec3d fallbackDestination = new Vec3d(roomPos).add(centerOffset + 0.5d, 2d, centerOffset + 0.5d);
         data.addSpawnPoint(id, fallbackDestination);
