@@ -17,6 +17,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraftforge.client.ForgeHooksClient;
 import org.dave.compactmachines3.CompactMachines3;
+import org.dave.compactmachines3.gui.framework.event.GuiDataUpdatedEvent;
+import org.dave.compactmachines3.gui.framework.event.GuiClosedEvent;
 import org.dave.compactmachines3.gui.framework.event.MouseClickEvent;
 import org.dave.compactmachines3.gui.framework.event.MouseClickMoveEvent;
 import org.dave.compactmachines3.gui.framework.event.WidgetEventResult;
@@ -27,6 +29,8 @@ import org.dave.compactmachines3.misc.RenderTickCounter;
 import org.dave.compactmachines3.utility.ChunkUtils;
 import org.lwjgl.opengl.GL11;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class WidgetMachinePreview extends Widget {
@@ -37,6 +41,10 @@ public class WidgetMachinePreview extends Widget {
     private int prevMouseY = -1;
 
     int glListId = -1;
+    int machineId = -1;
+    private List<BlockPos> renderPositions = Collections.emptyList();
+    private List<BlockPos> tileEntityPositions = Collections.emptyList();
+    private int tileEntityListVersion = -1;
 
     long lastClickTime = Long.MAX_VALUE;
 
@@ -75,6 +83,40 @@ public class WidgetMachinePreview extends Widget {
 
             return WidgetEventResult.HANDLED;
         });
+
+        this.addListener(GuiClosedEvent.class, (event, widget) -> {
+            this.clearPreview();
+
+            return WidgetEventResult.CONTINUE_PROCESSING;
+        });
+
+        this.addListener(GuiDataUpdatedEvent.class, (event, widget) -> {
+            if(this.machineId != GuiMachineData.id) {
+                this.clearPreview();
+                this.machineId = GuiMachineData.id;
+                GuiMachineData.markDisplayListDirty();
+            }
+
+            return WidgetEventResult.CONTINUE_PROCESSING;
+        });
+    }
+
+    private void releaseDisplayList() {
+        if (glListId != -1) {
+            GLAllocation.deleteDisplayLists(glListId);
+            glListId = -1;
+        }
+        this.renderPositions = Collections.emptyList();
+        this.tileEntityPositions = Collections.emptyList();
+        this.tileEntityListVersion = -1;
+    }
+
+    private void clearPreview() {
+        this.releaseDisplayList();
+
+        if(CompactMachines3.clientWorldData != null && CompactMachines3.clientWorldData.worldClone != null) {
+            CompactMachines3.clientWorldData.worldClone.providerClient.clear();
+        }
     }
 
     @Override
@@ -98,21 +140,23 @@ public class WidgetMachinePreview extends Widget {
                 int minChunkZ = startZ >> 4;
                 int maxChunkZ = endZ >> 4;
 
-                List<BlockPos> toRenderCopy = new java.util.ArrayList<>();
+                boolean hasLoadedChunk = false;
+                List<BlockPos> toRenderCopy = new ArrayList<>();
                 for (int cx = minChunkX; cx <= maxChunkX; cx++) {
                     for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
+                        hasLoadedChunk |= CompactMachines3.clientWorldData.worldClone.providerClient.isChunkGeneratedAt(cx, cz);
                         List<BlockPos> sub = CompactMachines3.clientWorldData.worldClone.providerClient.getRenderListForChunk(cx, cz);
                         if (sub != null) {
                             toRenderCopy.addAll(sub);
                         }
                     }
                 }
-            if(toRenderCopy != null) {
+            if(hasLoadedChunk) {
                 TileEntityRendererDispatcher.instance.setWorld(CompactMachines3.clientWorldData.worldClone);
 
-                if (glListId != -1) {
-                    GLAllocation.deleteDisplayLists(glListId);
-                }
+                this.releaseDisplayList();
+                this.renderPositions = toRenderCopy;
+                this.updateTileEntityPositions();
 
                 glListId = GLAllocation.generateDisplayLists(1);
                 GlStateManager.glNewList(glListId, GL11.GL_COMPILE);
@@ -129,12 +173,12 @@ public class WidgetMachinePreview extends Widget {
 
                 buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
                 GlStateManager.disableAlpha();
-                this.renderLayer(blockrendererdispatcher, buffer, BlockRenderLayer.SOLID, toRenderCopy);
+                this.renderLayer(blockrendererdispatcher, buffer, BlockRenderLayer.SOLID, this.renderPositions);
                 GlStateManager.enableAlpha();
-                this.renderLayer(blockrendererdispatcher, buffer, BlockRenderLayer.CUTOUT_MIPPED, toRenderCopy);
-                this.renderLayer(blockrendererdispatcher, buffer, BlockRenderLayer.CUTOUT, toRenderCopy);
+                this.renderLayer(blockrendererdispatcher, buffer, BlockRenderLayer.CUTOUT_MIPPED, this.renderPositions);
+                this.renderLayer(blockrendererdispatcher, buffer, BlockRenderLayer.CUTOUT, this.renderPositions);
                 GlStateManager.shadeModel(GL11.GL_FLAT);
-                this.renderLayer(blockrendererdispatcher, buffer, BlockRenderLayer.TRANSLUCENT, toRenderCopy);
+                this.renderLayer(blockrendererdispatcher, buffer, BlockRenderLayer.TRANSLUCENT, this.renderPositions);
 
                 tessellator.draw();
 
@@ -143,10 +187,12 @@ public class WidgetMachinePreview extends Widget {
                 GlStateManager.popAttrib();
 
                 GlStateManager.glEndList();
+                GuiMachineData.requiresNewDisplayList = false;
             }
         }
 
         if(CompactMachines3.clientWorldData.worldClone != null) {
+            this.updateTileEntityPositions();
             renderChunk();
         } else {
             // TODO: Draw unused screen and help information; account for future updates with loot compact machines
@@ -154,6 +200,10 @@ public class WidgetMachinePreview extends Widget {
     }
 
     public void renderChunk() {
+        if(glListId == -1) {
+            return;
+        }
+
         // Init GlStateManager
         TextureManager textureManager = Minecraft.getMinecraft().getTextureManager();
         textureManager.bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
@@ -225,31 +275,8 @@ public class WidgetMachinePreview extends Widget {
 
         GlStateManager.resetColor();
 
-        BlockPos roomPos = GuiMachineData.roomPos;
-        if (roomPos == null)
-            return;
-        int machineSize = GuiMachineData.machineSize;
-        int startX = roomPos.getX();
-        int startZ = roomPos.getZ();
-        int endX = startX + machineSize;
-        int endZ = startZ + machineSize;
-
-        int minChunkX = startX >> 4;
-        int maxChunkX = endX >> 4;
-        int minChunkZ = startZ >> 4;
-        int maxChunkZ = endZ >> 4;
-
-        List<BlockPos> toRenderCopy = new java.util.ArrayList<>();
-        for (int cx = minChunkX; cx <= maxChunkX; cx++) {
-            for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
-                List<BlockPos> sub = CompactMachines3.clientWorldData.worldClone.providerClient.getRenderListForChunk(cx, cz);
-                if (sub != null) {
-                    toRenderCopy.addAll(sub);
-                }
-            }
-        }
         if(ConfigurationHandler.MachineSettings.renderTileEntitiesInGUI) {
-            this.renderTileEntities(TileEntityRendererDispatcher.instance, toRenderCopy);
+            this.renderTileEntities(TileEntityRendererDispatcher.instance, this.tileEntityPositions);
         }
 
         if(ConfigurationHandler.MachineSettings.renderLivingEntitiesInGUI) {
@@ -280,25 +307,67 @@ public class WidgetMachinePreview extends Widget {
                 CompactMachines3.logger.debug("Could not determine actual state of block: {}", state.getBlock());
             }
 
-            ForgeHooksClient.setRenderLayer(renderLayer);
-
             try {
-                TileEntity te = CompactMachines3.clientWorldData.worldClone.getTileEntity(pos);
-                if (te != null && ChunkUtils.erroneousTiles.contains(te.getClass().getName())) {
+                ForgeHooksClient.setRenderLayer(renderLayer);
+
+                try {
+                    TileEntity te = CompactMachines3.clientWorldData.worldClone.getTileEntity(pos);
+                    if (te != null && ChunkUtils.erroneousTiles.contains(te.getClass().getName())) {
+                        continue;
+                    }
+                } catch(Exception e) {
                     continue;
                 }
-            } catch(Exception e) {
-                continue;
-            }
 
-            try {
-                blockrendererdispatcher.renderBlock(state, pos, CompactMachines3.clientWorldData.worldClone, buffer);
-            } catch (Throwable e) {
-                CompactMachines3.logger.debug("Failed rendering of block: {}", state.getBlock());
+                try {
+                    blockrendererdispatcher.renderBlock(state, pos, CompactMachines3.clientWorldData.worldClone, buffer);
+                } catch (Throwable e) {
+                    CompactMachines3.logger.debug("Failed rendering of block: {}", state.getBlock());
+                }
+            } finally {
+                ForgeHooksClient.setRenderLayer(null);
             }
-
-            ForgeHooksClient.setRenderLayer(null);
         }
+    }
+
+    private void updateTileEntityPositions() {
+        int version = CompactMachines3.clientWorldData.worldClone.providerClient.getTileEntityListVersion();
+        if (this.tileEntityListVersion == version) {
+            return;
+        }
+
+        this.tileEntityPositions = this.collectTileEntityPositions();
+        this.tileEntityListVersion = version;
+    }
+
+    private List<BlockPos> collectTileEntityPositions() {
+        BlockPos roomPos = GuiMachineData.roomPos;
+        if (roomPos == null) {
+            return Collections.emptyList();
+        }
+
+        int machineSize = GuiMachineData.machineSize;
+        int startX = roomPos.getX();
+        int startZ = roomPos.getZ();
+        int endX = startX + machineSize;
+        int endZ = startZ + machineSize;
+
+        int minChunkX = startX >> 4;
+        int maxChunkX = endX >> 4;
+        int minChunkZ = startZ >> 4;
+        int maxChunkZ = endZ >> 4;
+
+        List<BlockPos> result = new ArrayList<>();
+        for (int cx = minChunkX; cx <= maxChunkX; cx++) {
+            for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
+                List<BlockPos> sub = CompactMachines3.clientWorldData.worldClone.providerClient.getTileEntityListForChunk(cx, cz);
+                if (sub != null) {
+                    result.addAll(sub);
+                }
+            }
+        }
+
+        return result;
     }
 
     private void renderEntities() {

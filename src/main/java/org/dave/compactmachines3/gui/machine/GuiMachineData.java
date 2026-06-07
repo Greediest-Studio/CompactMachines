@@ -7,6 +7,7 @@ import org.dave.compactmachines3.gui.framework.WidgetGuiContainer;
 import org.dave.compactmachines3.utility.DimensionBlockPos;
 
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.Set;
 
 public class GuiMachineData {
@@ -61,6 +62,11 @@ public class GuiMachineData {
 
     public static void updateGuiMachineData(int machineSize, int id, BlockPos roomPos, DimensionBlockPos machinePos, String owner, String customName, Set<String> playerWhiteList, boolean locked) {
         canRender = false;
+        boolean previewGeometryChanged =
+                GuiMachineData.machineSize != machineSize ||
+                GuiMachineData.id != id ||
+                !Objects.equals(GuiMachineData.roomPos, roomPos);
+
         GuiMachineData.machineSize = machineSize;
         GuiMachineData.id = id;
         GuiMachineData.roomPos = roomPos;
@@ -70,7 +76,9 @@ public class GuiMachineData {
         GuiMachineData.playerWhiteList = new ArrayList<>(playerWhiteList);
         GuiMachineData.locked = locked;
 
-        requiresNewDisplayList = true;
+        if(previewGeometryChanged) {
+            markDisplayListDirty();
+        }
         canRender = true;
 
         if(Minecraft.getMinecraft().currentScreen instanceof WidgetGuiContainer) {
@@ -81,5 +89,9 @@ public class GuiMachineData {
 
             widgetGuiContainer.fireDataUpdateEvent();
         }
+    }
+
+    public static void markDisplayListDirty() {
+        requiresNewDisplayList = true;
     }
 }

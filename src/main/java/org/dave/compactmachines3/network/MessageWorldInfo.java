@@ -3,6 +3,7 @@ package org.dave.compactmachines3.network;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.storage.WorldInfo;
+import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.common.network.ByteBufUtils;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
@@ -33,7 +34,9 @@ public class MessageWorldInfo implements IMessage, IMessageHandler<MessageWorldI
 
     @Override
     public IMessage onMessage(MessageWorldInfo message, MessageContext ctx) {
-        CompactMachines3.clientWorldData.init(message.worldInfo);
+        FMLCommonHandler.instance().getWorldThread(ctx.netHandler).addScheduledTask(() -> {
+            CompactMachines3.clientWorldData.init(message.worldInfo);
+        });
         return null;
     }
 }

@@ -5,6 +5,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
+import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
@@ -12,6 +13,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.EmptyChunk;
 import net.minecraft.world.chunk.IChunkProvider;
+import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import org.dave.compactmachines3.utility.ChunkUtils;
 
 import javax.annotation.Nullable;
@@ -22,7 +24,11 @@ public class WorldCloneChunkProvider implements IChunkProvider {
     World world;
 
     private final Chunk blankChunk;
+    private final Long2ObjectMap<NBTTagCompound> chunkTags = new Long2ObjectOpenHashMap<>(8192);
+    private final Long2ObjectMap<NBTBase> renderTags = new Long2ObjectOpenHashMap<>(8192);
     private final Long2ObjectMap<List<BlockPos>> toRender = new Long2ObjectOpenHashMap<>(8192);
+    private final Long2ObjectMap<List<BlockPos>> tileEntities = new Long2ObjectOpenHashMap<>(8192);
+    private int tileEntityListVersion = 0;
     private final Long2ObjectMap<Chunk> loadedChunks = new Long2ObjectOpenHashMap<Chunk>(8192) {
         protected void rehash(int p_rehash_1_)
         {
@@ -38,36 +44,73 @@ public class WorldCloneChunkProvider implements IChunkProvider {
         this.world = worldIn;
     }
 
-    public Chunk loadChunkFromNBT(NBTTagCompound tag) {
+    public boolean loadChunkFromNBT(NBTTagCompound tag) {
         if (tag.isEmpty()) {
-            return null;
+            return false;
         }
+
+        long chunkPos = ChunkPos.asLong(tag.getInteger("xPos"), tag.getInteger("zPos"));
+        NBTTagCompound previousTag = this.chunkTags.get(chunkPos);
+        if (previousTag != null && previousTag.equals(tag)) {
+            return false;
+        }
+
+        boolean renderChanged = !isSameTag(this.renderTags.get(chunkPos), tag, "Sections");
+
         Chunk chunk = ChunkUtils.readChunkFromNBT(world, tag);
         chunk.markLoaded(true);
-        this.loadedChunks.put(ChunkPos.asLong(chunk.x, chunk.z), chunk);
+        this.loadedChunks.put(chunkPos, chunk);
+        this.tileEntities.put(chunkPos, new ArrayList<>(chunk.getTileEntityMap().keySet()));
+        this.tileEntityListVersion++;
 
-        List<BlockPos> toRender = new ArrayList<>();
-        // Iterate full chunk height (0..255) to support machines taller than one 16-block section
-        for (int x = 15; x >= 0; x--) {
-            for (int z = 15; z >= 0; z--) {
-                for (int y = 255; y >= 0; y--) {
-                    BlockPos pos = chunk.getPos().getBlock(x, y, z);
-                    IBlockState state = chunk.getBlockState(pos);
-                    if (state.getBlock() == Blocks.AIR) {
-                        continue;
+        if (renderChanged) {
+            this.toRender.put(chunkPos, buildRenderList(chunk));
+            this.renderTags.put(chunkPos, copyTag(tag, "Sections"));
+        }
+
+        this.chunkTags.put(chunkPos, tag.copy());
+        return renderChanged;
+    }
+
+    private List<BlockPos> buildRenderList(Chunk chunk) {
+        List<BlockPos> result = new ArrayList<>();
+        for (ExtendedBlockStorage storage : chunk.getBlockStorageArray()) {
+            if (storage == Chunk.NULL_BLOCK_STORAGE || storage.isEmpty()) {
+                continue;
+            }
+
+            int sectionY = storage.getYLocation();
+            for (int x = 15; x >= 0; x--) {
+                for (int z = 15; z >= 0; z--) {
+                    for (int y = 15; y >= 0; y--) {
+                        IBlockState state = storage.get(x, y, z);
+                        if (state.getBlock() == Blocks.AIR) {
+                            continue;
+                        }
+
+                        if (state.getBlock() == Blocks.BARRIER) {
+                            continue;
+                        }
+
+                        result.add(chunk.getPos().getBlock(x, sectionY + y, z));
                     }
-
-                    if (state.getBlock() == Blocks.BARRIER) {
-                        continue;
-                    }
-
-                    toRender.add(pos);
                 }
             }
         }
+        return result;
+    }
 
-        this.toRender.put(ChunkPos.asLong(chunk.x, chunk.z), toRender);
-        return chunk;
+    private boolean isSameTag(@Nullable NBTBase previous, NBTTagCompound tag, String key) {
+        if (!tag.hasKey(key)) {
+            return previous == null;
+        }
+
+        return previous != null && previous.equals(tag.getTag(key));
+    }
+
+    @Nullable
+    private NBTBase copyTag(NBTTagCompound tag, String key) {
+        return tag.hasKey(key) ? tag.getTag(key).copy() : null;
     }
 
     @Nullable
@@ -83,6 +126,23 @@ public class WorldCloneChunkProvider implements IChunkProvider {
 
     public List<BlockPos> getRenderListForChunk(int x, int z) {
         return this.toRender.get(ChunkPos.asLong(x, z));
+    }
+
+    public List<BlockPos> getTileEntityListForChunk(int x, int z) {
+        return this.tileEntities.get(ChunkPos.asLong(x, z));
+    }
+
+    public int getTileEntityListVersion() {
+        return this.tileEntityListVersion;
+    }
+
+    public void clear() {
+        this.loadedChunks.clear();
+        this.toRender.clear();
+        this.tileEntities.clear();
+        this.chunkTags.clear();
+        this.renderTags.clear();
+        this.tileEntityListVersion++;
     }
 
     @Override

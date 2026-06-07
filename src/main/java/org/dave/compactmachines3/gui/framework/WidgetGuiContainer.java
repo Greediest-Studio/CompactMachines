@@ -93,4 +93,13 @@ public abstract class WidgetGuiContainer extends GuiContainer {
     public void fireDataUpdateEvent() {
         dataUpdated = true;
     }
+
+    @Override
+    public void onGuiClosed() {
+        if(gui != null) {
+            gui.fireEvent(new GuiClosedEvent());
+        }
+
+        super.onGuiClosed();
+    }
 }

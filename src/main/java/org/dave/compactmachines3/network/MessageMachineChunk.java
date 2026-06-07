@@ -5,11 +5,13 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.chunk.Chunk;
+import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.common.network.ByteBufUtils;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import org.dave.compactmachines3.CompactMachines3;
+import org.dave.compactmachines3.gui.machine.GuiMachineData;
 import org.dave.compactmachines3.utility.ChunkUtils;
 import org.dave.compactmachines3.world.WorldSavedDataMachines;
 import org.dave.compactmachines3.world.tools.DimensionTools;
@@ -83,24 +85,31 @@ public class MessageMachineChunk implements IMessage, IMessageHandler<MessageMac
 
     @Override
     public IMessage onMessage(MessageMachineChunk message, MessageContext ctx) {
-        if(!CompactMachines3.clientWorldData.isInitialized()) {
-            return null;
-        }
-
-        // Clients might need to update the rendering of the machine block and its neighbors
-        try {
-            if (message.data.hasKey("chunks")) {
-                NBTTagList list = message.data.getTagList("chunks", 10);
-                for (int i = 0; i < list.tagCount(); i++) {
-                    NBTTagCompound chunkTag = list.getCompoundTagAt(i);
-                    CompactMachines3.clientWorldData.worldClone.providerClient.loadChunkFromNBT(chunkTag);
-                }
-            } else if (!message.data.getKeySet().isEmpty()) {
-                CompactMachines3.clientWorldData.worldClone.providerClient.loadChunkFromNBT(message.data);
+        FMLCommonHandler.instance().getWorldThread(ctx.netHandler).addScheduledTask(() -> {
+            if(!CompactMachines3.clientWorldData.isInitialized()) {
+                return;
             }
-        } catch (Exception e) {
-            CompactMachines3.logger.debug("Failed loading machine chunks: {}", e.getMessage());
-        }
+
+            // Clients might need to update the rendering of the machine block and its neighbors
+            try {
+                boolean renderChanged = false;
+                if (message.data.hasKey("chunks")) {
+                    NBTTagList list = message.data.getTagList("chunks", 10);
+                    for (int i = 0; i < list.tagCount(); i++) {
+                        NBTTagCompound chunkTag = list.getCompoundTagAt(i);
+                        renderChanged |= CompactMachines3.clientWorldData.worldClone.providerClient.loadChunkFromNBT(chunkTag);
+                    }
+                } else if (!message.data.getKeySet().isEmpty()) {
+                    renderChanged = CompactMachines3.clientWorldData.worldClone.providerClient.loadChunkFromNBT(message.data);
+                }
+
+                if (renderChanged) {
+                    GuiMachineData.markDisplayListDirty();
+                }
+            } catch (Exception e) {
+                CompactMachines3.logger.debug("Failed loading machine chunks: {}", e.getMessage());
+            }
+        });
         return null;
     }
 }
