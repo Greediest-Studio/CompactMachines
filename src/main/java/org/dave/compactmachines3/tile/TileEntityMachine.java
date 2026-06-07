@@ -56,6 +56,7 @@ public class TileEntityMachine extends TileEntity implements ICapabilityProvider
     protected String schema;
     protected boolean locked = false;
     protected Set<String> playerWhiteList;
+    protected Vec3d spawnPointBackup;
 
     public TileEntityMachine() {
         super();
@@ -96,6 +97,17 @@ public class TileEntityMachine extends TileEntity implements ICapabilityProvider
             schema = null;
         }
 
+        if (compound.hasKey("spawnPointBackup")) {
+            NBTTagCompound spawnPointTag = compound.getCompoundTag("spawnPointBackup");
+            spawnPointBackup = new Vec3d(
+                    spawnPointTag.getDouble("x"),
+                    spawnPointTag.getDouble("y"),
+                    spawnPointTag.getDouble("z")
+            );
+        } else {
+            spawnPointBackup = null;
+        }
+
         if(compound.hasKey("locked")) {
             locked = compound.getBoolean("locked");
         } else {
@@ -129,6 +141,14 @@ public class TileEntityMachine extends TileEntity implements ICapabilityProvider
             compound.setString("schema", schema);
         }
 
+        if (spawnPointBackup != null) {
+            NBTTagCompound spawnPointTag = new NBTTagCompound();
+            spawnPointTag.setDouble("x", spawnPointBackup.x);
+            spawnPointTag.setDouble("y", spawnPointBackup.y);
+            spawnPointTag.setDouble("z", spawnPointBackup.z);
+            compound.setTag("spawnPointBackup", spawnPointTag);
+        }
+
         compound.setBoolean("locked", locked);
 
         if(playerWhiteList.size() > 0) {
@@ -153,7 +173,7 @@ public class TileEntityMachine extends TileEntity implements ICapabilityProvider
         StructureTools.generateCubeForMachine(this);
 
         Vec3d destination = new Vec3d(this.getCenterRoomPos()).add(0.5, 2, 0.5);
-
+        setSpawnPointBackup(destination);
         WorldSavedDataMachines.getInstance().addSpawnPoint(this.id, destination);
     }
 
@@ -178,6 +198,10 @@ public class TileEntityMachine extends TileEntity implements ICapabilityProvider
         WorldSavedDataMachines.getInstance().setMachineRoomPosition(this.id, roomPos, true);
     }
 
+    public void setRoomPosWithoutSync(BlockPos roomPos) {
+        this.roomPos = roomPos;
+    }
+
     /**
      *
      * @return North-west corner of machine at y=40
@@ -197,6 +221,14 @@ public class TileEntityMachine extends TileEntity implements ICapabilityProvider
 
     public boolean isOnWhiteList(EntityPlayer player) {
         return playerWhiteList.contains(player.getName());
+    }
+
+    public Vec3d getSpawnPointBackup() {
+        return spawnPointBackup;
+    }
+
+    public void setSpawnPointBackup(Vec3d spawnPointBackup) {
+        this.spawnPointBackup = spawnPointBackup;
     }
 
     public boolean isOnWhiteList(String name) {

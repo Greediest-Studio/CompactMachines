@@ -480,7 +480,7 @@ public class WorldSavedDataMachines extends WorldSavedData {
                 BlockPos roomPos = null;
                 if (tag.hasKey("coords")) {
                     id = tag.getInteger("coords"); // Legacy
-                    roomPos = new BlockPos(id * 1024, 0, 0);
+                    roomPos = new BlockPos(id * 1024, 40, 0);
                 } else {
                     id = tag.getInteger("id");
                     if (tag.hasKey("roomPos"))

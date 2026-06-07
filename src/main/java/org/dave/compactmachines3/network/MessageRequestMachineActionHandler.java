@@ -3,6 +3,7 @@ package org.dave.compactmachines3.network;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTUtil;
 import net.minecraft.server.management.PlayerList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
@@ -19,6 +20,7 @@ import org.dave.compactmachines3.world.TeleporterMachines;
 import org.dave.compactmachines3.world.WorldSavedDataMachines;
 import org.dave.compactmachines3.world.tools.DimensionTools;
 import org.dave.compactmachines3.world.tools.TeleportationTools;
+import net.minecraft.util.math.Vec3d;
 
 public class MessageRequestMachineActionHandler implements IMessageHandler<MessageRequestMachineAction, MessageMachineContent> {
     @Override
@@ -43,6 +45,26 @@ public class MessageRequestMachineActionHandler implements IMessageHandler<Messa
                 ItemStack stack = new ItemStack(Blockss.machine, 1, size.getMeta());
                 NBTTagCompound compound = new NBTTagCompound();
                 compound.setInteger("machineId", finalId);
+                BlockPos roomPos = WorldSavedDataMachines.getInstance().getMachineRoomPosition(finalId);
+                if (roomPos != null) {
+                    compound.setTag("roomPos", NBTUtil.createPosTag(roomPos));
+                }
+
+                Vec3d spawnPoint = WorldSavedDataMachines.getInstance().spawnPoints.get(finalId);
+                if (spawnPoint == null) {
+                    TileEntityMachine machine = WorldSavedDataMachines.getInstance().getMachine(finalId);
+                    if (machine != null) {
+                        spawnPoint = machine.getSpawnPointBackup();
+                    }
+                }
+
+                if (spawnPoint != null) {
+                    NBTTagCompound spawnPointTag = new NBTTagCompound();
+                    spawnPointTag.setDouble("x", spawnPoint.x);
+                    spawnPointTag.setDouble("y", spawnPoint.y);
+                    spawnPointTag.setDouble("z", spawnPoint.z);
+                    compound.setTag("spawnPointBackup", spawnPointTag);
+                }
                 stack.setTagCompound(compound);
 
                 ItemHandlerHelper.giveItemToPlayer(serverPlayer, stack);

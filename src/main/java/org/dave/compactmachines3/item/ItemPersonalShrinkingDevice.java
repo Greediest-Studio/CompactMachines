@@ -20,6 +20,7 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 import org.dave.compactmachines3.CompactMachines3;
 import org.dave.compactmachines3.misc.ConfigurationHandler;
 import org.dave.compactmachines3.reference.GuiIds;
+import org.dave.compactmachines3.tile.TileEntityMachine;
 import org.dave.compactmachines3.world.WorldSavedDataMachines;
 import org.dave.compactmachines3.world.tools.StructureTools;
 import org.dave.compactmachines3.world.tools.TeleportationTools;
@@ -71,6 +72,11 @@ public class ItemPersonalShrinkingDevice extends ItemBase {
                 int id = StructureTools.getIdForPos(player.getPosition());
                 Vec3d pos = player.getPositionVector();
                 WorldSavedDataMachines.getInstance().addSpawnPoint(id, pos);
+                TileEntityMachine machine = WorldSavedDataMachines.getInstance().getMachine(id);
+                if (machine != null) {
+                    machine.setSpawnPointBackup(pos);
+                    machine.markDirty();
+                }
 
                 TextComponentTranslation tc = new TextComponentTranslation("item.compactmachines3.psd.spawnpoint_set");
                 tc.getStyle().setColor(TextFormatting.GREEN);

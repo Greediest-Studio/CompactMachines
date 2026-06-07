@@ -25,12 +25,31 @@ import org.dave.compactmachines3.world.TeleporterMachines;
 import org.dave.compactmachines3.world.WorldSavedDataMachines;
 
 public class TeleportationTools {
+    public static void persistMachineSpawnPoint(TileEntityMachine machine, Vec3d destination) {
+        if (machine == null || destination == null) {
+            return;
+        }
+
+        machine.setSpawnPointBackup(destination);
+        machine.markDirty();
+        WorldSavedDataMachines.getInstance().addSpawnPoint(machine.id, destination);
+    }
+
     private static Vec3d getMachineDestination(int id) {
         WorldSavedDataMachines data = WorldSavedDataMachines.getInstance();
 
         Vec3d existingDestination = data.spawnPoints.get(id);
         if (existingDestination != null) {
             return existingDestination;
+        }
+
+        TileEntityMachine machine = data.getMachine(id);
+        if (machine != null && machine.getSpawnPointBackup() != null) {
+            Vec3d backupDestination = machine.getSpawnPointBackup();
+            data.addSpawnPoint(id, backupDestination);
+            CompactMachines3.logger.warn("Spawn point missing for machine id {}. Restored destination from machine backup at {}, {}, {}",
+                    id, backupDestination.x, backupDestination.y, backupDestination.z);
+            return backupDestination;
         }
 
         BlockPos roomPos = data.getMachineRoomPosition(id);
@@ -160,7 +179,7 @@ public class TeleportationTools {
                 StructureTools.restoreSchema(schema, id);
 
                 Vec3d adjustedSpawnPosition = schema.getSpawnPosition().add(new Vec3d(WorldSavedDataMachines.getInstance().getMachineRoomPosition(id)));
-                WorldSavedDataMachines.getInstance().addSpawnPoint(machine.id, adjustedSpawnPosition);
+                persistMachineSpawnPoint(machine, adjustedSpawnPosition);
                 machine.setSchema(null);
                 machine.markDirty();
             }

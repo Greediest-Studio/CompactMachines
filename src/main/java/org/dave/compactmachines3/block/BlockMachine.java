@@ -19,6 +19,7 @@ import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTUtil;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
@@ -240,6 +241,16 @@ public class BlockMachine extends BlockBase implements IMetaBlockName, ITileEnti
             if (te.hasNewSchema()) {
                 compound.setString("schema", te.getSchemaName());
             }
+            if (te.getRoomPos() != null) {
+                compound.setTag("roomPos", NBTUtil.createPosTag(te.getRoomPos()));
+            }
+            if (te.getSpawnPointBackup() != null) {
+                NBTTagCompound spawnPointTag = new NBTTagCompound();
+                spawnPointTag.setDouble("x", te.getSpawnPointBackup().x);
+                spawnPointTag.setDouble("y", te.getSpawnPointBackup().y);
+                spawnPointTag.setDouble("z", te.getSpawnPointBackup().z);
+                compound.setTag("spawnPointBackup", spawnPointTag);
+            }
             stack.setTagCompound(compound);
         }
 
@@ -299,6 +310,23 @@ public class BlockMachine extends BlockBase implements IMetaBlockName, ITileEnti
                 tileEntityMachine.setSchema(tagCompound.getString("schema"));
             }
 
+            if (tagCompound.hasKey("roomPos")) {
+                BlockPos roomPos = NBTUtil.getPosFromTag(tagCompound.getCompoundTag("roomPos"));
+                tileEntityMachine.setRoomPosWithoutSync(roomPos);
+                if (!world.isRemote && tileEntityMachine.id != -1) {
+                    WorldSavedDataMachines.getInstance().setMachineRoomPosition(tileEntityMachine.id, roomPos, false);
+                }
+            }
+
+            if (tagCompound.hasKey("spawnPointBackup")) {
+                NBTTagCompound spawnPointTag = tagCompound.getCompoundTag("spawnPointBackup");
+                tileEntityMachine.setSpawnPointBackup(new net.minecraft.util.math.Vec3d(
+                        spawnPointTag.getDouble("x"),
+                        spawnPointTag.getDouble("y"),
+                        spawnPointTag.getDouble("z")
+                ));
+            }
+
             if(stack.hasDisplayName()) {
                 tileEntityMachine.setCustomName(stack.getDisplayName());
             }
@@ -310,6 +338,10 @@ public class BlockMachine extends BlockBase implements IMetaBlockName, ITileEnti
 
         if(!tileEntityMachine.hasOwner() && placer instanceof EntityPlayer) {
             tileEntityMachine.setOwner((EntityPlayer)placer);
+        }
+
+        if (!world.isRemote && tileEntityMachine.id != -1 && tileEntityMachine.getSpawnPointBackup() != null) {
+            TeleportationTools.persistMachineSpawnPoint(tileEntityMachine, tileEntityMachine.getSpawnPointBackup());
         }
 
         tileEntityMachine.markDirty();
