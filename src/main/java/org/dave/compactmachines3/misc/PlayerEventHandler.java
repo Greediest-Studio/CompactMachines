@@ -5,8 +5,6 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
-import net.minecraft.potion.Potion;
-import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.BlockPos;
@@ -18,7 +16,6 @@ import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.event.entity.player.PlayerSleepInBedEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.PlayerEvent;
-import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.dave.compactmachines3.gui.machine.GuiMachineData;
@@ -26,7 +23,6 @@ import org.dave.compactmachines3.init.Blockss;
 import org.dave.compactmachines3.network.MessageMachinePositions;
 import org.dave.compactmachines3.network.PackageHandler;
 import org.dave.compactmachines3.network.MessageWorldInfo;
-import org.dave.compactmachines3.reference.EnumMachineSize;
 import org.dave.compactmachines3.world.WorldSavedDataMachines;
 import org.dave.compactmachines3.world.tools.DimensionTools;
 import org.dave.compactmachines3.world.tools.TeleportationTools;
@@ -134,65 +130,5 @@ public class PlayerEventHandler {
         BlockPos drawPosition = trace.getBlockPos().up();
 
         RotationTools.renderArrowOnGround(cameraPosition, hitPosition, drawPosition);
-    }
-
-    @SubscribeEvent
-    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if(event.player.world.isRemote) {
-           return;
-        }
-
-        if(event.player.world.provider.getDimension() != ConfigurationHandler.Settings.dimensionId) {
-            return;
-        }
-
-        if (event.player.world.getTotalWorldTime() % 20 != 0) {
-            return;
-        }
-        int enteredMachineId = WorldSavedDataMachines.getInstance().getMachineIdFromEntityPos(event.player);
-
-        // No coord history -> out of here
-        int lastId = TeleportationTools.getLastKnownRoomId(event.player, false);
-        if(lastId == -1 && !ConfigurationHandler.MachineSettings.allowEnteringWithoutPSD) {
-            event.player.addPotionEffect(new PotionEffect(Potion.getPotionFromResourceLocation("minecraft:nausea"), 200, 5, false, false));
-            event.player.addPotionEffect(new PotionEffect(Potion.getPotionFromResourceLocation("minecraft:wither"), 160, 1, false, false));
-
-            // And strip the previous position data, so the player actually comes out of the machine and not where he was when he last "legitimately" entered a machine
-            event.player.getEntityData().removeTag("compactmachines3-oldDimension");
-            event.player.getEntityData().removeTag("compactmachines3-oldPosX");
-            event.player.getEntityData().removeTag("compactmachines3-oldPosY");
-            event.player.getEntityData().removeTag("compactmachines3-oldPosZ");
-
-            TeleportationTools.teleportPlayerOutOfMachineDimension((EntityPlayerMP) event.player);
-            return;
-        }
-
-        if (enteredMachineId != -1 && lastId != enteredMachineId && ConfigurationHandler.MachineSettings.allowEnteringWithoutPSD) {
-            TeleportationTools.addMachineIdToHistory(enteredMachineId, event.player);
-            return;
-        }
-
-        if(!ConfigurationHandler.MachineSettings.keepPlayersInside) { // If "keepPlayersInside" is set to false then there is no reason to check this
-            return;
-        }
-
-        EnumMachineSize enumSize = WorldSavedDataMachines.getInstance().machineSizes.get(lastId);
-        if(enumSize == null) {
-            // This should only happen after someone updated before this feature was implemented:
-            // The size value will only be known once at least one player entered the machine.
-            // Handle this gracefully by doing nothing
-            return;
-        }
-
-        if((event.player.isCreative() || event.player.isSpectator()) && event.player.canUseCommand(2, "")) {
-            return;
-        }
-
-        // True if the last machine the player entered does not equal the one they are inside of, which is not allowed
-        if (lastId != enteredMachineId) {
-            event.player.addPotionEffect(new PotionEffect(Potion.getPotionFromResourceLocation("minecraft:nausea"), 200, 5, false, false));
-            event.player.addPotionEffect(new PotionEffect(Potion.getPotionFromResourceLocation("minecraft:wither"), 160, 1, false, false));
-            TeleportationTools.teleportPlayerOutOfMachine((EntityPlayerMP) event.player);
-        }
     }
 }

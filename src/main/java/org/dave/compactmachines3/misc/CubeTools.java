@@ -9,6 +9,8 @@ import org.dave.compactmachines3.utility.ChunkBlockAccess;
 import org.dave.compactmachines3.world.WorldSavedDataMachines;
 
 public class CubeTools {
+    private static final int OUTER_WALL_THICKNESS = 3;
+
     public static EnumMachineSize getCubeSize(IBlockAccess world, BlockPos roomPos) {
         for (EnumMachineSize size : EnumMachineSize.values()) {
             BlockPos pos = roomPos.add(size.getDimension(), 0, 0);
@@ -25,6 +27,9 @@ public class CubeTools {
         int yOffset = world instanceof ChunkBlockAccess ? 0 : 40;
 
         int id = WorldSavedDataMachines.getClientMachineIdFromBoxPos(blockPos);
+        if (id == -1) {
+            id = getClientMachineIdFromOuterWallPos(blockPos, yOffset);
+        }
 
         if (id == -1)
             return true; // Render as full block
@@ -39,6 +44,10 @@ public class CubeTools {
         int x = blockPos.getX() - roomPos.getX(); // Relative x
         int y = blockPos.getY() - yOffset; // Relative y
         int z = blockPos.getZ() - roomPos.getZ(); // Relative z
+        if (x < 0 || x > size || y < 0 || y > size || z < 0 || z > size) {
+            return false;
+        }
+
         if (x != 0 && x != size && z != 0 && z != size && y > 0 && y < size) {
             return true; // Not part of the wall, render as full block
         }
@@ -61,5 +70,33 @@ public class CubeTools {
         }
 
         return false;
+    }
+
+    private static int getClientMachineIdFromOuterWallPos(BlockPos blockPos, int yOffset) {
+        if (WorldSavedDataMachines.getClientMachineGrid() == null || WorldSavedDataMachines.getClientMachineSizes() == null) {
+            return -1;
+        }
+
+        for (Integer id : WorldSavedDataMachines.getClientMachineGrid().keySet()) {
+            BlockPos roomPos = WorldSavedDataMachines.getClientMachineGrid().get(id);
+            EnumMachineSize sizeEnum = WorldSavedDataMachines.getClientMachineSizes().get(id);
+            if (roomPos == null || sizeEnum == null) {
+                continue;
+            }
+
+            int size = sizeEnum.getDimension();
+            int x = blockPos.getX() - roomPos.getX();
+            int y = blockPos.getY() - yOffset;
+            int z = blockPos.getZ() - roomPos.getZ();
+            boolean insideOuterShell = x >= -OUTER_WALL_THICKNESS && x <= size + OUTER_WALL_THICKNESS
+                    && y >= -OUTER_WALL_THICKNESS && y <= size + OUTER_WALL_THICKNESS
+                    && z >= -OUTER_WALL_THICKNESS && z <= size + OUTER_WALL_THICKNESS;
+
+            if (insideOuterShell) {
+                return id;
+            }
+        }
+
+        return -1;
     }
 }
