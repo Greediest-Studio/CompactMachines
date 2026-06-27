@@ -68,6 +68,31 @@ public class TeleportationTools {
         return fallbackDestination;
     }
 
+    private static Vec3d getMachineDestination(TileEntityMachine machine) {
+        if (machine == null) {
+            return null;
+        }
+
+        Vec3d backupDestination = machine.getSpawnPointBackup();
+        if (backupDestination != null) {
+            WorldSavedDataMachines.getInstance().addSpawnPoint(machine.id, backupDestination);
+            return backupDestination;
+        }
+
+        BlockPos roomPos = machine.getRoomPos();
+        if (roomPos == null) {
+            return getMachineDestination(machine.id);
+        }
+
+        EnumMachineSize size = machine.getSize();
+        int centerOffset = size != null ? size.getDimension() / 2 : 1;
+        Vec3d fallbackDestination = new Vec3d(roomPos).add(centerOffset + 0.5d, 2d, centerOffset + 0.5d);
+        persistMachineSpawnPoint(machine, fallbackDestination);
+        CompactMachines3.logger.warn("Spawn point missing for machine id {}. Reconstructed fallback destination from machine tile at {}, {}, {}",
+                machine.id, fallbackDestination.x, fallbackDestination.y, fallbackDestination.z);
+        return fallbackDestination;
+    }
+
     public static boolean tryToEnterMachine(EntityPlayer player, TileEntityMachine machine) {
         BlockPos pos = machine.getPos();
         World world = machine.getWorld();
@@ -147,6 +172,10 @@ public class TeleportationTools {
     }
 
     public static void teleportPlayerToMachine(EntityPlayerMP player, int id, boolean isReturning) {
+        teleportPlayerToMachine(player, id, isReturning, null);
+    }
+
+    private static void teleportPlayerToMachine(EntityPlayerMP player, int id, boolean isReturning, TileEntityMachine targetMachine) {
         if (id == -1)
             return;
 
@@ -170,7 +199,7 @@ public class TeleportationTools {
             addMachineIdToHistory(id, playerNBT);
         }
 
-        TileEntityMachine machine = WorldSavedDataMachines.getInstance().getMachine(id);
+        TileEntityMachine machine = targetMachine != null ? targetMachine : WorldSavedDataMachines.getInstance().getMachine(id);
         if (machine != null && machine.hasNewSchema()) {
             Schema schema = SchemaRegistry.instance.getSchema(machine.getSchemaName());
             if(schema == null) {
@@ -187,7 +216,7 @@ public class TeleportationTools {
             CompactMachines3.logger.warn("Could not resolve TileEntityMachine for id {} during teleport; using saved destination data", id);
         }
 
-        Vec3d destination = getMachineDestination(id);
+        Vec3d destination = targetMachine != null ? getMachineDestination(targetMachine) : getMachineDestination(id);
         if (destination == null) {
             CompactMachines3.logger.error("Teleport destination could not be resolved for machine id {}", id);
             return;
@@ -301,7 +330,11 @@ public class TeleportationTools {
 
 
     public static void teleportPlayerToMachine(EntityPlayerMP player, TileEntityMachine machine) {
-        teleportPlayerToMachine(player, machine.id, false);
+        if (machine == null) {
+            return;
+        }
+
+        teleportPlayerToMachine(player, machine.id, false, machine);
     }
 
     public static void teleportPlayerOutOfMachine(EntityPlayerMP player) {

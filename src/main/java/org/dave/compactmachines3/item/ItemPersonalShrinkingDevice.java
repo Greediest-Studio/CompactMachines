@@ -69,7 +69,14 @@ public class ItemPersonalShrinkingDevice extends ItemBase {
             EntityPlayerMP serverPlayer = (EntityPlayerMP)player;
 
             if(player.isSneaking()) {
-                int id = StructureTools.getIdForPos(player.getPosition());
+                int id = TeleportationTools.getLastKnownRoomId(player, false);
+                if (id == -1) {
+                    id = StructureTools.getIdForPos(player.getPosition());
+                }
+                if (id == -1) {
+                    return new ActionResult(EnumActionResult.FAIL, stack);
+                }
+
                 Vec3d pos = player.getPositionVector();
                 WorldSavedDataMachines.getInstance().addSpawnPoint(id, pos);
                 TileEntityMachine machine = WorldSavedDataMachines.getInstance().getMachine(id);

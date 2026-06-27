@@ -109,23 +109,31 @@ public class WorldSavedDataMachines extends WorldSavedData {
     }
 
     private static int getMachineIdFromBoxPos(int x, int y, int z, Map<Integer, BlockPos> machineGrid, Map<Integer, EnumMachineSize> machineSizes) {
+        int bestId = -1;
+        int bestSize = Integer.MAX_VALUE;
+
         for (Map.Entry<Integer, BlockPos> entry : machineGrid.entrySet()) {
-            int roomPosX = entry.getValue().getX();
-            int roomPosZ = entry.getValue().getZ();
+            BlockPos roomPos = entry.getValue();
+            int roomPosX = roomPos.getX();
+            int roomPosY = roomPos.getY();
+            int roomPosZ = roomPos.getZ();
             EnumMachineSize sizeEnum = machineSizes.get(entry.getKey());
             if (sizeEnum == null) {
                 CompactMachines3.logger.error("Machine size was null with key {}", entry.getKey());
                 continue;
             }
             int size = sizeEnum.getDimension();
-            boolean insideRoom = roomPosX <= x && x <= roomPosX + size && roomPosZ <= z && z <= roomPosZ + size && 40 <= y && y <= 40 + size;
+            boolean insideRoom = roomPosX <= x && x <= roomPosX + size
+                    && roomPosY <= y && y <= roomPosY + size
+                    && roomPosZ <= z && z <= roomPosZ + size;
 
-            if (insideRoom) {
-                return entry.getKey();
+            if (insideRoom && (size < bestSize || (size == bestSize && (bestId == -1 || entry.getKey() < bestId)))) {
+                bestId = entry.getKey();
+                bestSize = size;
             }
         }
 
-        return -1;
+        return bestId;
     }
 
     public void addMachineSize(int id, EnumMachineSize size) {
