@@ -15,6 +15,7 @@ import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.dave.compactmachines3.CompactMachines3;
+import org.dave.compactmachines3.init.Blockss;
 import org.dave.compactmachines3.misc.ConfigurationHandler;
 import org.dave.compactmachines3.reference.EnumMachineSize;
 import org.dave.compactmachines3.tile.TileEntityMachine;
@@ -24,6 +25,7 @@ import org.dave.compactmachines3.world.tools.DimensionTools;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
 
@@ -81,9 +83,14 @@ public class WorldSavedDataMachines extends WorldSavedData {
     }
 
     public void setMachineRoomPosition(int id, BlockPos roomPos, boolean updateLastGrid) {
-        machineGrid.put(id, roomPos);
+        if (roomPos == null) {
+            machineGrid.remove(id);
+        } else {
+            machineGrid.put(id, roomPos);
+        }
         if (updateLastGrid && roomPos != null)
             this.lastGrid = roomPos;
+        this.markDirty();
     }
 
     public BlockPos getMachineRoomPosition(int id) {
@@ -114,12 +121,14 @@ public class WorldSavedDataMachines extends WorldSavedData {
 
         for (Map.Entry<Integer, BlockPos> entry : machineGrid.entrySet()) {
             BlockPos roomPos = entry.getValue();
+            if (roomPos == null) {
+                continue;
+            }
             int roomPosX = roomPos.getX();
             int roomPosY = roomPos.getY();
             int roomPosZ = roomPos.getZ();
             EnumMachineSize sizeEnum = machineSizes.get(entry.getKey());
             if (sizeEnum == null) {
-                CompactMachines3.logger.error("Machine size was null with key {}", entry.getKey());
                 continue;
             }
             int size = sizeEnum.getDimension();
@@ -137,6 +146,9 @@ public class WorldSavedDataMachines extends WorldSavedData {
     }
 
     public void addMachineSize(int id, EnumMachineSize size) {
+        if (size == null) {
+            return;
+        }
         machineSizes.put(id, size);
         CompactMachines3.logger.debug("Adding machine size: id={}, size={}", id, size.getName());
         this.markDirty();
@@ -191,6 +203,7 @@ public class WorldSavedDataMachines extends WorldSavedData {
             instance = new WorldSavedDataMachines("WorldSavedDataMachines");
             instance.markDirty();
         }
+        instance.repairMachineSizes();
 
         CompactMachines3.logger.info("Loaded data for compact machine world: {} spawn points, next machine id is {}, players with beds: {}", instance.spawnPoints.size(),
                 instance.nextId, instance.bedLocations.size());
@@ -243,6 +256,9 @@ public class WorldSavedDataMachines extends WorldSavedData {
     }
 
     private void addTunnel(BlockPos position, EnumFacing side, int id, boolean isLoading) {
+        if (id == -1) {
+            return;
+        }
         Map<EnumFacing, BlockPos> sideMapping = tunnels.computeIfAbsent(id, k -> new HashMap<>());
 
         sideMapping.put(side, position);
@@ -315,6 +331,13 @@ public class WorldSavedDataMachines extends WorldSavedData {
 
     private void addRedstoneTunnel(BlockPos position, EnumFacing side, boolean isOutput, boolean isLoading) {
         int id = getMachineIdFromBoxPos(position);
+        this.addRedstoneTunnel(position, side, isOutput, id, isLoading);
+    }
+
+    private void addRedstoneTunnel(BlockPos position, EnumFacing side, boolean isOutput, int id, boolean isLoading) {
+        if (id == -1) {
+            return;
+        }
 
         Map<EnumFacing, RedstoneTunnelData> sideMapping = redstoneTunnels.get(id);
         if(sideMapping == null) {
@@ -349,6 +372,7 @@ public class WorldSavedDataMachines extends WorldSavedData {
     @Override
     public NBTTagCompound writeToNBT(NBTTagCompound compound) {
         compound.setInteger("nextMachineId", nextId);
+        repairMachineSizes();
 
         NBTTagCompound bedLocationsTag = new NBTTagCompound();
         for (UUID playerId : bedLocations.keySet()) {
@@ -358,7 +382,11 @@ public class WorldSavedDataMachines extends WorldSavedData {
 
         NBTTagCompound machineSizesTag = new NBTTagCompound();
         for (int id : machineSizes.keySet()) {
-            int size = machineSizes.get(id).getMeta();
+            EnumMachineSize machineSize = machineSizes.get(id);
+            if (machineSize == null) {
+                continue;
+            }
+            int size = machineSize.getMeta();
             machineSizesTag.setInteger("" + id, size);
         }
 
@@ -395,6 +423,7 @@ public class WorldSavedDataMachines extends WorldSavedData {
 
         NBTTagList redstoneTunnelList = new NBTTagList();
         for (Map.Entry<Integer, Map<EnumFacing, RedstoneTunnelData>>  entry : redstoneTunnels.entrySet()) {
+            int id = entry.getKey();
             Map<EnumFacing, RedstoneTunnelData> sideMappings = entry.getValue();
 
             for (Map.Entry<EnumFacing, RedstoneTunnelData> sideEntry : sideMappings.entrySet()) {
@@ -402,6 +431,7 @@ public class WorldSavedDataMachines extends WorldSavedData {
                 RedstoneTunnelData info = sideEntry.getValue();
 
                 NBTTagCompound tag = new NBTTagCompound();
+                tag.setInteger("id", id);
                 tag.setInteger("side", side.getIndex());
                 tag.setInteger("x", info.pos.getX());
                 tag.setInteger("y", info.pos.getY());
@@ -500,6 +530,8 @@ public class WorldSavedDataMachines extends WorldSavedData {
             }
         }
 
+        repairMachineSizes();
+
         // Have to do tunnels after machines so that #getMachineIdFromBoxPos works (needs machineGrid AND machineSizes filled with data)
         if (nbt.hasKey("redstoneTunnels")) {
             redstoneTunnels.clear();
@@ -510,8 +542,9 @@ public class WorldSavedDataMachines extends WorldSavedData {
                 BlockPos position = new BlockPos(tag.getInteger("x"), tag.getInteger("y"), tag.getInteger("z"));
                 EnumFacing side = EnumFacing.byIndex(tag.getInteger("side"));
                 boolean isOutput = tag.getBoolean("output");
+                int id = tag.hasKey("id", 3) ? tag.getInteger("id") : getMachineIdFromBoxPos(position);
 
-                this.addRedstoneTunnel(position, side, isOutput, true);
+                this.addRedstoneTunnel(position, side, isOutput, id, true);
             }
         }
 
@@ -531,5 +564,83 @@ public class WorldSavedDataMachines extends WorldSavedData {
 
         if (nbt.hasKey("lastGrid"))
             this.lastGrid = NBTUtil.getPosFromTag(nbt.getCompoundTag("lastGrid"));
+    }
+
+    private void repairMachineSizes() {
+        int repaired = 0;
+        int removed = 0;
+        WorldServer machineWorld = DimensionTools.getServerMachineWorld();
+
+        Iterator<Map.Entry<Integer, BlockPos>> iterator = machineGrid.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<Integer, BlockPos> entry = iterator.next();
+            int id = entry.getKey();
+            BlockPos roomPos = entry.getValue();
+
+            if (roomPos == null) {
+                iterator.remove();
+                removed++;
+                continue;
+            }
+
+            if (machineSizes.get(id) != null) {
+                continue;
+            }
+
+            EnumMachineSize size = getMachineSizeFromMachineBlock(id);
+            if (size == null) {
+                size = getMachineSizeFromRoom(machineWorld, roomPos);
+            }
+
+            if (size == null) {
+                iterator.remove();
+                removed++;
+                continue;
+            }
+
+            machineSizes.put(id, size);
+            repaired++;
+        }
+
+        if (repaired > 0 || removed > 0) {
+            CompactMachines3.logger.warn("Repaired Compact Machines saved data: restored {} missing machine sizes, removed {} invalid machine grid entries", repaired, removed);
+            this.markDirty();
+        }
+    }
+
+    private EnumMachineSize getMachineSizeFromMachineBlock(int id) {
+        DimensionBlockPos dimPos = machinePositions.get(id);
+        if (dimPos == null) {
+            return null;
+        }
+
+        WorldServer world = DimensionTools.getWorldServerForDimension(dimPos.getDimension());
+        if (world == null) {
+            return null;
+        }
+
+        TileEntity tileEntity = world.getTileEntity(dimPos.getBlockPos());
+        if (tileEntity instanceof TileEntityMachine) {
+            return ((TileEntityMachine) tileEntity).getSize();
+        }
+
+        return null;
+    }
+
+    private EnumMachineSize getMachineSizeFromRoom(WorldServer machineWorld, BlockPos roomPos) {
+        if (machineWorld == null || roomPos == null) {
+            return null;
+        }
+
+        EnumMachineSize bestSize = null;
+        for (EnumMachineSize size : EnumMachineSize.values()) {
+            if (machineWorld.getBlockState(roomPos.add(size.getDimension(), 0, 0)).getBlock() == Blockss.wall) {
+                if (bestSize == null || size.getDimension() < bestSize.getDimension()) {
+                    bestSize = size;
+                }
+            }
+        }
+
+        return bestSize;
     }
 }

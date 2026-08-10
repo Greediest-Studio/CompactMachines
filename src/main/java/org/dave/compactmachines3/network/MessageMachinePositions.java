@@ -59,10 +59,12 @@ public class MessageMachinePositions implements IMessage, IMessageHandler<Messag
         NBTTagCompound machineGridTag = new NBTTagCompound();
         NBTTagCompound machineSizesTag = new NBTTagCompound();
         for (Map.Entry<Integer, BlockPos> entry : machineGrid.entrySet()) {
+            EnumMachineSize size = machineSizes.get(entry.getKey());
+            if (entry.getValue() == null || size == null) {
+                continue;
+            }
             machineGridTag.setTag(entry.getKey().toString(), NBTUtil.createPosTag(entry.getValue()));
-        }
-        for (Map.Entry<Integer, EnumMachineSize> entry : machineSizes.entrySet()) {
-            machineSizesTag.setInteger(entry.getKey().toString(), entry.getValue().getMeta());
+            machineSizesTag.setInteger(entry.getKey().toString(), size.getMeta());
         }
         tag.setTag("machineGrid", machineGridTag);
         tag.setTag("machineSizes", machineSizesTag);
